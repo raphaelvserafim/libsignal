@@ -1,11 +1,12 @@
 {
   "name": "@raphaelvserafim/libsignal",
-  "version": "3.0.0",
+  "version": "3.0.2",
   "description": "Open Whisper Systems' libsignal for Node - TypeScript",
   "repository": "raphaelvserafim/libsignal",
   "scripts": {
     "compiler": "node src/scripts/compiler.js",
-    "build": "tsc -p tsconfig.build.json  && cp -r src/whisper dist/"
+    "build": "tsc --project tsconfig.compile.json",
+    "publish": "npm publish --access public"
   },
   "author": {
     "name": "Raphael Serafim",
@@ -13,8 +14,8 @@
   },
   "license": "GPL-3.0",
   "main": "dist/index.js",
-  "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
+  "type": "commonjs",
   "files": [
     "dist/**/*",
     "README.md",
@@ -32,14 +33,15 @@
     "node": ">=14.0.0"
   },
   "dependencies": {
+    "acorn": "^8.11.3",
+    "acorn-walk": "^8.3.2",
     "curve25519-js": "^0.0.4",
     "pbjs": "^0.0.14",
     "pbts": "^4.0.7",
-    "acorn": "^8.11.3",
-    "acorn-walk": "^8.3.2",
     "protobufjs": "^7.5.4",
     "request": "^2.88.2",
-    "request-promise-native": "^1.0.9"
+    "request-promise-native": "^1.0.9",
+    "tslib": "^2.8.1"
   },
   "devDependencies": {
     "@types/jest": "^29.5.8",
