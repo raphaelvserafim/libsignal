@@ -1,26 +1,38 @@
 {
   "name": "@raphaelvserafim/libsignal",
-  "version": "3.0.2",
+  "version": "3.0.8",
   "description": "Open Whisper Systems' libsignal for Node - TypeScript",
-  "repository": "raphaelvserafim/libsignal",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/raphaelvserafim/libsignal.git"
+  },
+  "main": "dist/cjs/index.js",
+  "module": "dist/esm/index.js",
+  "types": "dist/cjs/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/esm/index.js",
+      "require": "./dist/cjs/index.js",
+      "types": "./dist/cjs/index.d.ts"
+    }
+  },
+  "files": [
+    "dist/**/*",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
-    "compiler": "node src/scripts/compiler.js",
-    "build": "tsc --project tsconfig.compile.json",
-    "publish": "npm publish --access public"
+    "build": "npm run build:cjs && npm run build:esm && npm run fix-esm",
+    "build:cjs": "tsc --project tsconfig.cjs.json && cp -r src/whisper dist/cjs/whisper/",
+    "build:esm": "tsc --project tsconfig.esm.json && cp -r src/whisper dist/esm/whisper/",
+    "fix-esm": "echo '{\"type\":\"module\"}' > dist/esm/package.json",
+    "publish": "npm publish --access=public"
   },
   "author": {
     "name": "Raphael Serafim",
     "url": "https://raphaelvserafim.com"
   },
   "license": "GPL-3.0",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "type": "commonjs",
-  "files": [
-    "dist/**/*",
-    "README.md",
-    "LICENSE"
-  ],
   "keywords": [
     "signal",
     "whispersystems",

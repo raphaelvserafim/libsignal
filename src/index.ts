@@ -7,6 +7,17 @@ import SessionCipher from './protocol/session-cipher';
 import SessionRecord from './protocol/session-record';
 import * as errors from './utils/errors';
 
+export {
+  crypto,
+  curve,
+  keyhelper,
+  ProtocolAddress,
+  SessionBuilder,
+  SessionCipher,
+  SessionRecord,
+  errors
+};
+
 const libsignal = {
   crypto,
   curve,
