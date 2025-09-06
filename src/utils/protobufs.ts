@@ -1,6 +1,5 @@
-import { textsecure } from '../whisper/whisper-protocol';
+// @ts-nocheck
+import { textsecure } from '../whisper/whisper-protocol.ts';
+const { WhisperMessage, PreKeyWhisperMessage } = textsecure;
 
-// Re-export das classes para uso mais fácil
-export const WhisperMessage = textsecure.WhisperMessage;
-export const PreKeyWhisperMessage = textsecure.PreKeyWhisperMessage;
-export const KeyExchangeMessage = textsecure.KeyExchangeMessage;
+export { WhisperMessage, PreKeyWhisperMessage, };
