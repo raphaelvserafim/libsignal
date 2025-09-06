@@ -13,59 +13,65 @@ const PRIVATE_KEY_DER_PREFIX = Buffer.from([
 
 const KEY_BUNDLE_TYPE = Buffer.from([5]);
 
-const prefixKeyInPublicKey = function (pubKey: Buffer): Buffer {
-  return Buffer.from(Buffer.concat([new Uint8Array(KEY_BUNDLE_TYPE), new Uint8Array(pubKey)]));
+const prefixKeyInPublicKey = (pubKey: Uint8Array): Buffer => {
+  if (pubKey.length === 0) {
+    throw new Error('Public key cannot be empty');
+  }
+
+  return Buffer.concat([KEY_BUNDLE_TYPE, pubKey]);
 };
 
-function validatePrivKey(privKey: Buffer): void {
-  if (privKey === undefined) {
-    throw new Error("Undefined private key");
+function validatePrivKey(privKey: Uint8Array): void {
+  if (privKey === undefined || privKey === null) {
+    throw new Error("Private key cannot be undefined or null");
   }
-  if (!(privKey instanceof Buffer)) {
+  if (!(privKey instanceof Uint8Array)) {
     throw new Error(`Invalid private key type: ${privKey && typeof privKey === 'object' ? (privKey as any).constructor?.name : typeof privKey}`);
   }
-  if (privKey.byteLength != 32) {
+  if (privKey.byteLength !== 32) {
     throw new Error(`Incorrect private key length: ${privKey.byteLength}`);
   }
 }
 
-function scrubPubKeyFormat(pubKey: Buffer): Buffer {
-  if (!(pubKey instanceof Buffer)) {
+
+function scrubPubKeyFormat(pubKey: Uint8Array): Buffer {
+  if (!(pubKey instanceof Uint8Array)) {
     throw new Error(`Invalid public key type: ${pubKey && typeof pubKey === 'object' ? (pubKey as any).constructor?.name : typeof pubKey}`);
   }
-  if (pubKey === undefined || ((pubKey.byteLength != 33 || pubKey[0] != 5) && pubKey.byteLength != 32)) {
+
+  if (!pubKey || ((pubKey.byteLength !== 33 || pubKey[0] !== 5) && pubKey.byteLength !== 32)) {
     throw new Error("Invalid public key");
   }
-  if (pubKey.byteLength == 33) {
-    return pubKey.slice(1);
+
+  if (pubKey.byteLength === 33) {
+    return Buffer.from(pubKey.slice(1));
   } else {
     console.error("WARNING: Expected pubkey of length 33, please report the ST and client that generated the pubkey");
-    return pubKey;
+    return Buffer.from(pubKey);
   }
 }
 
-function unclampEd25519PrivateKey(clampedSk: Buffer): Uint8Array {
-  const unclampedSk = new Uint8Array(clampedSk);
 
-  if (!unclampedSk || unclampedSk.length < 32) {
+function unclampEd25519PrivateKey(clampedSk: Uint8Array): Uint8Array {
+  if (!clampedSk || clampedSk.length !== 32) {
     throw new Error("Invalid private key for unclamping");
   }
 
-  // Fix the first byte
-  unclampedSk[0]! |= 6; // Ensure last 3 bits match expected `110` pattern
+  const unclampedSk = new Uint8Array(clampedSk);
 
-  // Fix the last byte
-  unclampedSk[31]! |= 128; // Restore the highest bit
-  unclampedSk[31]! &= ~64; // Clear the second-highest bit
+  unclampedSk[0] |= 6;    // Set last 3 bits to `110` pattern
+  unclampedSk[31] |= 128; // Set highest bit
+  unclampedSk[31] &= ~64; // Clear second-highest bit
 
   return unclampedSk;
 }
 
-export function getPublicFromPrivateKey(privKey: Buffer): Buffer {
+export function getPublicFromPrivateKey(privKey: Uint8Array): Buffer {
   const unclampedPK = unclampEd25519PrivateKey(privKey);
   const keyPair = curveJs.generateKeyPair(unclampedPK);
-  return prefixKeyInPublicKey(Buffer.from(keyPair.public));
+  return prefixKeyInPublicKey(keyPair.public);
 }
+
 
 export function generateKeyPair(): { pubKey: Buffer; privKey: Buffer } {
   try {
@@ -94,12 +100,15 @@ export function generateKeyPair(): { pubKey: Buffer; privKey: Buffer } {
   }
 }
 
-export function calculateAgreement(pubKey: Buffer, privKey: Buffer): Buffer {
-  pubKey = scrubPubKeyFormat(pubKey);
+
+export function calculateAgreement(pubKey: Uint8Array, privKey: Uint8Array): Buffer {
+  const scrubbed = scrubPubKeyFormat(pubKey);
   validatePrivKey(privKey);
-  if (!pubKey || pubKey.byteLength != 32) {
+
+  if (scrubbed.byteLength !== 32) {
     throw new Error("Invalid public key");
   }
+
   if (typeof nodeCrypto.diffieHellman === 'function') {
     const nodePrivateKey = nodeCrypto.createPrivateKey({
       key: Buffer.concat([PRIVATE_KEY_DER_PREFIX, privKey]),
@@ -107,7 +116,7 @@ export function calculateAgreement(pubKey: Buffer, privKey: Buffer): Buffer {
       type: 'pkcs8'
     });
     const nodePublicKey = nodeCrypto.createPublicKey({
-      key: Buffer.concat([PUBLIC_KEY_DER_PREFIX, pubKey]),
+      key: Buffer.concat([PUBLIC_KEY_DER_PREFIX, scrubbed]),
       format: 'der',
       type: 'spki'
     });
@@ -117,31 +126,33 @@ export function calculateAgreement(pubKey: Buffer, privKey: Buffer): Buffer {
       publicKey: nodePublicKey,
     });
   } else {
-    const secret = curveJs.sharedKey(privKey, pubKey);
+    const secret = curveJs.sharedKey(privKey, scrubbed);
     return Buffer.from(secret);
   }
 }
 
-export function calculateSignature(privKey: Buffer, message: Buffer): Buffer {
+export function calculateSignature(privKey: Uint8Array, message: Uint8Array): Buffer {
   validatePrivKey(privKey);
-  if (!message) {
+  if (!message || message.byteLength === 0) {
     throw new Error("Invalid message");
   }
   return Buffer.from(curveJs.sign(privKey, message, randomBytes(64)));
 }
 
-export function verifySignature(pubKey: Buffer, msg: Buffer, sig: Buffer, isInit?: boolean): boolean {
-  pubKey = scrubPubKeyFormat(pubKey);
-  if (!pubKey || pubKey.byteLength != 32) {
+export function verifySignature(pubKey: Uint8Array, msg: Uint8Array, sig: Uint8Array, isInit?: boolean): boolean {
+  const scrubbed = scrubPubKeyFormat(pubKey);
+
+  if (scrubbed.byteLength !== 32) {
     throw new Error("Invalid public key");
   }
-  if (!msg) {
+  if (!msg || msg.byteLength === 0) {
     throw new Error("Invalid message");
   }
-  if (!sig || sig.byteLength != 64) {
+  if (!sig || sig.byteLength !== 64) {
     throw new Error("Invalid signature");
   }
-  return isInit ? true : curveJs.verify(pubKey, msg, sig);
+
+  return isInit ? true : curveJs.verify(scrubbed, msg, sig);
 }
 
 const curve = {

@@ -1,3 +1,10 @@
+/**
+ * ProtocolAddress represents a unique identifier for a device in the protocol.
+ * It consists of an id (string) and a deviceId (number).
+ * The string representation is in the format "id.deviceId".
+ * @raphaelvserafim
+ */
+
 export class ProtocolAddress {
   public readonly id: string;
   public readonly deviceId: number;
@@ -7,9 +14,6 @@ export class ProtocolAddress {
       throw new Error('Invalid address encoding');
     }
     const parts = encodedAddress.split('.');
-    if (parts.length < 2 || !parts[0] || !parts[1]) {
-      throw new Error('Invalid address encoding');
-    }
     return new this(parts[0], parseInt(parts[1]));
   }
 
@@ -21,6 +25,7 @@ export class ProtocolAddress {
       throw new TypeError('encoded addr detected');
     }
     this.id = id;
+
     if (typeof deviceId !== 'number') {
       throw new TypeError('number required for deviceId');
     }
@@ -38,5 +43,3 @@ export class ProtocolAddress {
     return other.id === this.id && other.deviceId === this.deviceId;
   }
 }
-
-export default ProtocolAddress;

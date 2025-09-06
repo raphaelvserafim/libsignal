@@ -1,12 +1,12 @@
-export const BaseKeyType = {
-  OURS: 1,
-  THEIRS: 2
-} as const;
+export enum BaseKeyType {
+  OURS = 1,
+  THEIRS = 2
+}
 
-export const ChainType = {
-  SENDING: 1,
-  RECEIVING: 2
-} as const;
+export enum ChainType {
+  SENDING = 1,
+  RECEIVING = 2
+}
 
 export interface QueueJob<T> {
   awaitable: () => Promise<T>;
@@ -111,3 +111,70 @@ export interface Migration {
 
 
 
+
+
+export interface ProtocolAddress {
+  id: string;
+  deviceId: number;
+  toString(): string;
+}
+
+export interface SessionRatchet {
+  rootKey: Buffer;
+  ephemeralKeyPair: KeyPair;
+  lastRemoteEphemeralKey: Uint8Array;
+  previousCounter: number;
+}
+
+export interface SessionIndexInfo {
+  created: number;
+  used: number;
+  remoteIdentityKey: Uint8Array;
+  baseKey: Uint8Array;
+  baseKeyType: BaseKeyType;
+  closed: number;
+}
+
+export interface SessionChainKey {
+  counter: number;
+  key: Buffer;
+}
+
+export interface SessionChain {
+  messageKeys: Record<number, Buffer>;
+  chainKey: SessionChainKey;
+  chainType: ChainType;
+}
+
+export interface Session {
+  registrationId: number;
+  currentRatchet: SessionRatchet;
+  indexInfo: SessionIndexInfo;
+  pendingPreKey?: {
+    signedKeyId: number;
+    baseKey: Uint8Array;
+    preKeyId?: number;
+  };
+  addChain(key: Uint8Array, chain: SessionChain): void;
+  getChain(key: Uint8Array): SessionChain | undefined;
+  deleteChain(key: Uint8Array): void;
+}
+
+export interface SessionRecordInterface {
+  getSession(baseKey: Uint8Array): Session | undefined;
+  getOpenSession(): Session | undefined;
+  closeSession(session: Session): void;
+  setSession(session: Session): void;
+  getSessions(): Session[];
+  isClosed(session: Session): boolean;
+}
+
+export interface StorageInterface {
+  isTrustedIdentity(id: string, identityKey: Uint8Array): Promise<boolean>;
+  loadSession(address: string): Promise<SessionRecordInterface | undefined>;
+  storeSession(address: string, record: SessionRecordInterface): Promise<void>;
+  loadPreKey(keyId: number): Promise<KeyPair | undefined>;
+  loadSignedPreKey(keyId: number): Promise<KeyPair | undefined>;
+  getOurIdentity(): Promise<KeyPair>;
+  removePreKey(keyId: number): Promise<void>;
+}
