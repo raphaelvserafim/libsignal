@@ -3,9 +3,9 @@
  *
  */
 
-import { CLOSED_SESSIONS_MAX, migrations, SESSION_RECORD_VERSION } from "../constants";
-import { BaseKeyType } from "../types";
-import { SessionEntry } from "./session-entry";
+import { CLOSED_SESSIONS_MAX, migrations, SESSION_RECORD_VERSION } from "../constants/index.js";
+import { BaseKeyType } from "../types/index.js";
+import { SessionEntry } from "./session-entry.js";
 
 
 export class SessionRecord {

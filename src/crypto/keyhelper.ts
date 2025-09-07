@@ -1,5 +1,5 @@
 import nodeCrypto from 'crypto';
-import curve from "./curve";
+import curve from "./curve.js";
 
 interface KeyPair {
   privKey: Buffer;

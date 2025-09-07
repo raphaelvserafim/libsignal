@@ -3,13 +3,13 @@
  * @raphaelvserafim
  */
 'use strict';
-import crypto from "../crypto";
-import curve from "../crypto/curve";
-import { BaseKeyType, ChainType } from "../types";
-import { PreKeyError, UntrustedIdentityKeyError } from "../utils/errors";
-import queueJob from "../utils/queue-job";
-import { ProtocolAddress } from "./protocol-address";
-import { SessionRecord } from "./session-record";
+import crypto from "../crypto/index.js";
+import curve from "../crypto/curve.js";
+import { BaseKeyType, ChainType } from "../types/index.js";
+import { PreKeyError, UntrustedIdentityKeyError } from "../utils/errors.js";
+import queueJob from "../utils/queue-job.js";
+import { ProtocolAddress } from "./protocol-address.js";
+import { SessionRecord } from "./session-record.js";
 
 
 export class SessionBuilder {

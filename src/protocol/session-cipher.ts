@@ -5,15 +5,15 @@
  */
 
 'use strict';
-import crypto from "../crypto";
-import curve from "../crypto/curve";
-import { ChainType } from "../types";
-import { MessageCounterError, SessionError, UntrustedIdentityKeyError } from "../utils/errors";
-import { PreKeyWhisperMessage, WhisperMessage } from "../utils/protobufs";
-import queueJob from "../utils/queue-job";
-import { ProtocolAddress } from "./protocol-address";
-import { SessionBuilder } from "./session-builder";
-import { SessionRecord } from "./session-record";
+import crypto from "../crypto/index.js";
+import curve from "../crypto/curve.js";
+import { ChainType } from "../types/index.js";
+import { MessageCounterError, SessionError, UntrustedIdentityKeyError } from "../utils/errors.js";
+import { PreKeyWhisperMessage, WhisperMessage } from "../utils/protobufs.js";
+import queueJob from "../utils/queue-job.js";
+import { ProtocolAddress } from "./protocol-address.js";
+import { SessionBuilder } from "./session-builder.js";
+import { SessionRecord } from "./session-record.js";
 
 const VERSION = 3;
 

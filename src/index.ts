@@ -1,11 +1,11 @@
-import crypto from './crypto';
-import curve from './crypto/curve';
-import * as keyhelper from './crypto/keyhelper';
-import { ProtocolAddress } from './protocol/protocol-address';
-import { SessionBuilder } from './protocol/session-builder';
-import { SessionCipher } from './protocol/session-cipher';
-import { SessionRecord } from './protocol/session-record';
-import * as errors from './utils/errors';
+import crypto from './crypto/index.js';
+import curve from './crypto/curve.js';
+import * as keyhelper from './crypto/keyhelper.js';
+import { ProtocolAddress } from './protocol/protocol-address.js';
+import { SessionBuilder } from './protocol/session-builder.js';
+import { SessionCipher } from './protocol/session-cipher.js';
+import { SessionRecord } from './protocol/session-record.js';
+import * as errors from './utils/errors.js';
 
 export {
   crypto,
