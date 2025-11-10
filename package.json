@@ -1,6 +1,6 @@
 {
   "name": "@raphaelvserafim/libsignal",
-  "version": "4.0.2",
+  "version": "4.0.3",
   "description": "Open Whisper Systems' libsignal for Node - TypeScript",
   "repository": {
     "type": "git",
