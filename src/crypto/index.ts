@@ -15,10 +15,7 @@ export function encrypt(
 
   const cipher = createCipheriv('aes-256-cbc', key, iv);
 
-  const encrypted = Buffer.concat([
-    cipher.update(data),
-    cipher.final()
-  ]);
+  const encrypted = Buffer.concat([cipher.update(data), cipher.final()]);
 
   return encrypted;
 }
@@ -37,10 +34,7 @@ export function decrypt(
 
   const decipher = createDecipheriv('aes-256-cbc', key, iv);
 
-  const decrypted = Buffer.concat([
-    decipher.update(data),
-    decipher.final()
-  ]);
+  const decrypted = Buffer.concat([decipher.update(data), decipher.final()]);
 
   return decrypted;
 }
