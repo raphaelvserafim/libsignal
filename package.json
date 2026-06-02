@@ -1,6 +1,6 @@
 {
   "name": "@raphaelvserafim/libsignal",
-  "version": "4.0.4",
+  "version": "4.0.7",
   "description": "Open Whisper Systems' libsignal for Node - TypeScript",
   "repository": {
     "type": "git",
@@ -28,7 +28,7 @@
     "fix-esm": "echo '{\"type\":\"module\"}' > dist/esm/package.json",
     "test": "vitest run",
     "test:watch": "vitest",
-    "publish": "npm publish --access=public"
+    "prepublishOnly": "npm run build && npm run test"
   },
   "author": {
     "name": "Raphael Serafim",
