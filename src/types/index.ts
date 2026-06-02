@@ -8,12 +8,6 @@ export enum ChainType {
   RECEIVING = 2
 }
 
-export interface QueueJob<T> {
-  awaitable: () => Promise<T>;
-  resolve: (value: T) => void;
-  reject: (reason: any) => void;
-}
-
 export interface KeyPair {
   pubKey: Buffer;
   privKey: Buffer;
@@ -42,14 +36,32 @@ export interface ChainKey {
   key?: Buffer;
 }
 
+export interface Chain {
+  chainKey: ChainKey;
+  chainType: ChainType;
+  messageKeys: Record<number, Buffer>;
+}
 
-export interface Storage {
-  isTrustedIdentity(id: string, identityKey: Buffer): Promise<boolean>;
-  loadSession(fqAddr: string): Promise<any>;
-  storeSession(fqAddr: string, record: any): Promise<void>;
-  loadPreKey(preKeyId: number): Promise<KeyPair | undefined>;
-  loadSignedPreKey(signedPreKeyId: number): Promise<KeyPair | undefined>;
-  getOurIdentity(): Promise<KeyPair>;
+export interface IndexInfo {
+  baseKey: Buffer;
+  baseKeyType: BaseKeyType;
+  closed: number;
+  used: number;
+  created: number;
+  remoteIdentityKey: Buffer;
+}
+
+export interface Ratchet {
+  rootKey: Buffer;
+  ephemeralKeyPair: KeyPair;
+  lastRemoteEphemeralKey: Buffer;
+  previousCounter: number;
+}
+
+export interface PendingPreKey {
+  signedKeyId: number;
+  baseKey: Buffer;
+  preKeyId?: number;
 }
 
 export interface IncomingMessage {
@@ -60,113 +72,16 @@ export interface IncomingMessage {
   registrationId: number;
 }
 
-
-
-
-export interface Chain {
-  chainKey: ChainKey;
-  chainType: number;
-  messageKeys: { [index: string]: Buffer };
-}
-
-export interface IndexInfo {
-  baseKey: Buffer;
-  baseKeyType: number;
-  closed: number;
-  used: number;
-  created: number;
-  remoteIdentityKey: Buffer;
-}
-
-export interface CurrentRatchet {
-  ephemeralKeyPair: KeyPair;
-  lastRemoteEphemeralKey: Buffer;
-  previousCounter: number;
-  rootKey: Buffer;
-}
-
-export interface PendingPreKey {
-  baseKey: Buffer;
-  [key: string]: any;
-}
-
-export interface SessionData {
-  registrationId: number;
-  currentRatchet: any;
-  indexInfo: any;
-  _chains: any;
-  pendingPreKey?: any;
-}
-
-export interface SessionRecordData {
-  _sessions: { [key: string]: SessionData };
-  version: string;
-  registrationId?: number;
-}
-
-export interface Migration {
-  version: string;
-  migrate: (data: SessionRecordData) => void;
-}
-
-
-
-
-
-export interface ProtocolAddress {
-  id: string;
-  deviceId: number;
-  toString(): string;
-}
-
-export interface SessionRatchet {
-  rootKey: Buffer;
-  ephemeralKeyPair: KeyPair;
-  lastRemoteEphemeralKey: Uint8Array;
-  previousCounter: number;
-}
-
-export interface SessionIndexInfo {
-  created: number;
-  used: number;
-  remoteIdentityKey: Uint8Array;
-  baseKey: Uint8Array;
-  baseKeyType: BaseKeyType;
-  closed: number;
-}
-
-export interface SessionChainKey {
-  counter: number;
-  key: Buffer;
-}
-
-export interface SessionChain {
-  messageKeys: Record<number, Buffer>;
-  chainKey: SessionChainKey;
-  chainType: ChainType;
-}
-
-export interface Session {
-  registrationId: number;
-  currentRatchet: SessionRatchet;
-  indexInfo: SessionIndexInfo;
-  pendingPreKey?: {
-    signedKeyId: number;
-    baseKey: Uint8Array;
-    preKeyId?: number;
-  };
-  addChain(key: Uint8Array, chain: SessionChain): void;
-  getChain(key: Uint8Array): SessionChain | undefined;
-  deleteChain(key: Uint8Array): void;
-}
-
 export interface SessionRecordInterface {
-  getSession(baseKey: Uint8Array): Session | undefined;
-  getOpenSession(): Session | undefined;
-  closeSession(session: Session): void;
-  setSession(session: Session): void;
-  getSessions(): Session[];
-  isClosed(session: Session): boolean;
+  getSession(key: Uint8Array): unknown;
+  getOpenSession(): unknown;
+  setSession(session: unknown): void;
+  closeSession(session: unknown): void;
+  getSessions(): unknown[];
+  isClosed(session: unknown): boolean;
+  haveOpenSession(): boolean;
+  removeOldSessions(): void;
+  serialize(): SerializedSessionRecord;
 }
 
 export interface StorageInterface {
@@ -176,5 +91,52 @@ export interface StorageInterface {
   loadPreKey(keyId: number): Promise<KeyPair | undefined>;
   loadSignedPreKey(keyId: number): Promise<KeyPair | undefined>;
   getOurIdentity(): Promise<KeyPair>;
-  removePreKey(keyId: number): Promise<void>;
+  getOurRegistrationId?(): Promise<number>;
+  removePreKey?(keyId: number): Promise<void>;
+}
+
+export interface SerializedChain {
+  chainKey: {
+    counter: number;
+    key: string | null;
+  };
+  chainType: ChainType;
+  messageKeys: Record<string, string>;
+}
+
+export interface SerializedSessionEntry {
+  registrationId: number;
+  currentRatchet: {
+    ephemeralKeyPair: {
+      pubKey: string;
+      privKey: string;
+    };
+    lastRemoteEphemeralKey: string;
+    previousCounter: number;
+    rootKey: string;
+  };
+  indexInfo: {
+    baseKey: string;
+    baseKeyType: BaseKeyType;
+    closed: number;
+    used: number;
+    created: number;
+    remoteIdentityKey: string;
+  };
+  _chains: Record<string, SerializedChain>;
+  pendingPreKey?: {
+    signedKeyId: number;
+    baseKey: string;
+    preKeyId?: number;
+  };
+}
+
+export interface SerializedSessionRecord {
+  _sessions: Record<string, SerializedSessionEntry>;
+  version: string;
+}
+
+export interface Migration {
+  version: string;
+  migrate: (data: SerializedSessionRecord & { registrationId?: string }) => void;
 }

@@ -8,7 +8,7 @@ async function iterateHash(data: ArrayBuffer, key: ArrayBuffer, count: number) {
   if (--count === 0) {
     return result;
   } else {
-    return iterateHash(result.buffer.slice(0) as ArrayBuffer, key, count);
+    return iterateHash(result.buffer.slice(result.byteOffset, result.byteOffset + result.byteLength) as ArrayBuffer, key, count);
   }
 }
 

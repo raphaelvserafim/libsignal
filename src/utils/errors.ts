@@ -14,9 +14,9 @@ export class SignalError extends Error { }
 export class UntrustedIdentityKeyError extends SignalError {
   public readonly name: string = 'UntrustedIdentityKeyError';
   public readonly addr: string;
-  public readonly identityKey: any; // Using 'any' as the original type is not specified
+  public readonly identityKey: Uint8Array;
 
-  constructor(addr: string, identityKey: any) {
+  constructor(addr: string, identityKey: Uint8Array) {
     super();
     this.addr = addr;
     this.identityKey = identityKey;

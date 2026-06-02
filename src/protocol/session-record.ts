@@ -1,24 +1,19 @@
-/**
- * SessionRecord class
- *
- */
-
 import { CLOSED_SESSIONS_MAX, migrations, SESSION_RECORD_VERSION } from "../constants/index.js";
-import { BaseKeyType } from "../types/index.js";
+import { BaseKeyType, SerializedSessionRecord } from "../types/index.js";
 import { SessionEntry } from "./session-entry.js";
 
 
 export class SessionRecord {
 
-  sessions: { [key: string]: SessionEntry };
+  sessions: Record<string, SessionEntry>;
 
   version: string;
 
-  static createEntry() {
+  static createEntry(): SessionEntry {
     return new SessionEntry();
   }
 
-  static migrate(data: any) {
+  static migrate(data: SerializedSessionRecord & { registrationId?: string }) {
     let run = (data.version === undefined);
     for (let i = 0; i < migrations.length; ++i) {
       if (run) {
@@ -33,11 +28,11 @@ export class SessionRecord {
     }
   }
 
-  static deserialize(data: any) {
+  static deserialize(data: SerializedSessionRecord & { registrationId?: string }): SessionRecord {
     if (data.version !== SESSION_RECORD_VERSION) {
       this.migrate(data);
     }
-    const obj: SessionRecord = new this();
+    const obj = new this();
     if (data._sessions) {
       for (const [key, entry] of Object.entries(data._sessions)) {
         obj.sessions[key] = SessionEntry.deserialize(entry);
@@ -51,8 +46,8 @@ export class SessionRecord {
     this.version = SESSION_RECORD_VERSION;
   }
 
-  serialize() {
-    const _sessions: any = {};
+  serialize(): SerializedSessionRecord {
+    const _sessions: SerializedSessionRecord['_sessions'] = {};
     for (const [key, entry] of Object.entries(this.sessions)) {
       _sessions[key] = entry.serialize();
     }
@@ -62,32 +57,33 @@ export class SessionRecord {
     };
   }
 
-  haveOpenSession() {
-    const openSession: any = this.getOpenSession();
+  haveOpenSession(): boolean {
+    const openSession = this.getOpenSession();
     return (!!openSession && typeof openSession.registrationId === 'number');
   }
 
-  getSession(key: Buffer) {
-    const session: any = this.sessions[key.toString('base64')];
+  getSession(key: Uint8Array): SessionEntry | undefined {
+    const session = this.sessions[Buffer.from(key).toString('base64')];
     if (session && session.indexInfo.baseKeyType === BaseKeyType.OURS) {
       throw new Error("Tried to lookup a session using our basekey");
     }
     return session;
   }
 
-  getOpenSession() {
+  getOpenSession(): SessionEntry | undefined {
     for (const session of Object.values(this.sessions)) {
       if (!this.isClosed(session)) {
         return session;
       }
     }
+    return undefined;
   }
 
-  setSession(session: any) {
+  setSession(session: SessionEntry) {
     this.sessions[session.indexInfo.baseKey.toString('base64')] = session;
   }
 
-  getSessions() {
+  getSessions(): SessionEntry[] {
     return Array.from(Object.values(this.sessions)).sort((a, b) => {
       const aUsed = a.indexInfo.used || 0;
       const bUsed = b.indexInfo.used || 0;
@@ -95,31 +91,29 @@ export class SessionRecord {
     });
   }
 
-  closeSession(session: any) {
+  closeSession(session: SessionEntry) {
     if (this.isClosed(session)) {
       console.warn("Session already closed", session);
       return;
     }
-    console.info("Closing session:", session);
     session.indexInfo.closed = Date.now();
   }
 
-  openSession(session: any) {
+  openSession(session: SessionEntry) {
     if (!this.isClosed(session)) {
       console.warn("Session already open");
     }
-    console.info("Opening session:", session);
     session.indexInfo.closed = -1;
   }
 
-  isClosed(session: any) {
+  isClosed(session: SessionEntry): boolean {
     return session.indexInfo.closed !== -1;
   }
 
   removeOldSessions() {
     while (Object.keys(this.sessions).length > CLOSED_SESSIONS_MAX) {
-      let oldestKey;
-      let oldestSession;
+      let oldestKey: string | undefined;
+      let oldestSession: SessionEntry | undefined;
       for (const [key, session] of Object.entries(this.sessions)) {
         if (session.indexInfo.closed !== -1 &&
           (!oldestSession || session.indexInfo.closed < oldestSession.indexInfo.closed)) {
@@ -128,7 +122,6 @@ export class SessionRecord {
         }
       }
       if (oldestKey) {
-        console.info("Removing old closed session:", oldestSession);
         delete this.sessions[oldestKey];
       } else {
         throw new Error('Corrupt sessions object');
@@ -142,4 +135,3 @@ export class SessionRecord {
     }
   }
 }
-

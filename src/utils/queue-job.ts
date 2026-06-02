@@ -2,14 +2,14 @@
  * jobQueue manages multiple queues indexed by device to serialize
  * session I/O ops on the database.
  */
-//@ts-nocheck
-interface Job<T = any> {
+
+interface Job<T = unknown> {
   awaitable: () => Promise<T>;
   resolve: (value: T) => void;
-  reject: (reason?: any) => void;
+  reject: (reason?: unknown) => void;
 }
 
-const _queueAsyncBuckets = new Map<any, Job[]>();
+const _queueAsyncBuckets = new Map<string, Job[]>();
 const _gcLimit = 10000;
 
 async function _asyncQueueExecutor(queue: Job[], cleanup: () => void): Promise<void> {
@@ -46,15 +46,11 @@ async function _asyncQueueExecutor(queue: Job[], cleanup: () => void): Promise<v
  * @param awaitable The async awaitable function to execute.
  * @returns A Promise that resolves or rejects with the awaitable's result.
  */
-export default function queueJob<T>(bucket: any, awaitable: () => Promise<T>): Promise<T> {
+export default function queueJob<T>(bucket: string, awaitable: () => Promise<T>): Promise<T> {
   if (!awaitable.name) {
     // Make debugging easier by adding a name to this function.
     Object.defineProperty(awaitable, 'name', { writable: true });
-    if (typeof bucket === 'string') {
-      awaitable.name = bucket;
-    } else {
-      console.warn("Unhandled bucket type (for naming):", typeof bucket, bucket);
-    }
+    (awaitable as { name: string }).name = bucket;
   }
 
   let inactive = false;
@@ -66,7 +62,7 @@ export default function queueJob<T>(bucket: any, awaitable: () => Promise<T>): P
   const queue = _queueAsyncBuckets.get(bucket)!;
 
   const jobPromise = new Promise<T>((resolve, reject) => {
-    queue.push({ awaitable, resolve, reject });
+    queue.push({ awaitable, resolve, reject } as Job);
   });
 
   if (inactive) {
