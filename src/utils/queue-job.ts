@@ -4,39 +4,39 @@
  */
 
 interface Job<T = unknown> {
-  awaitable: () => Promise<T>;
-  resolve: (value: T) => void;
-  reject: (reason?: unknown) => void;
+  awaitable: () => Promise<T>
+  resolve: (value: T) => void
+  reject: (reason?: unknown) => void
 }
 
-const _queueAsyncBuckets = new Map<string, Job[]>();
-const _gcLimit = 10000;
+const _queueAsyncBuckets = new Map<string, Job[]>()
+const _gcLimit = 10000
 
 async function _asyncQueueExecutor(queue: Job[], cleanup: () => void): Promise<void> {
-  let offt = 0;
+  let offt = 0
   while (true) {
-    const limit = Math.min(queue.length, offt + _gcLimit);
+    const limit = Math.min(queue.length, offt + _gcLimit)
     for (let i = offt; i < limit; i++) {
-      const job = queue[i];
+      const job = queue[i]
       try {
-        job.resolve(await job.awaitable());
+        job.resolve(await job.awaitable())
       } catch (e) {
-        job.reject(e);
+        job.reject(e)
       }
     }
     if (limit < queue.length) {
       /* Perform lazy GC of queue for faster iteration. */
       if (limit >= _gcLimit) {
-        queue.splice(0, limit);
-        offt = 0;
+        queue.splice(0, limit)
+        offt = 0
       } else {
-        offt = limit;
+        offt = limit
       }
     } else {
-      break;
+      break
     }
   }
-  cleanup();
+  cleanup()
 }
 
 /**
@@ -49,26 +49,26 @@ async function _asyncQueueExecutor(queue: Job[], cleanup: () => void): Promise<v
 export default function queueJob<T>(bucket: string, awaitable: () => Promise<T>): Promise<T> {
   if (!awaitable.name) {
     // Make debugging easier by adding a name to this function.
-    Object.defineProperty(awaitable, 'name', { writable: true });
-    (awaitable as { name: string }).name = bucket;
+    Object.defineProperty(awaitable, 'name', { writable: true })
+    ;(awaitable as { name: string }).name = bucket
   }
 
-  let inactive = false;
+  let inactive = false
   if (!_queueAsyncBuckets.has(bucket)) {
-    _queueAsyncBuckets.set(bucket, []);
-    inactive = true;
+    _queueAsyncBuckets.set(bucket, [])
+    inactive = true
   }
 
-  const queue = _queueAsyncBuckets.get(bucket)!;
+  const queue = _queueAsyncBuckets.get(bucket)!
 
   const jobPromise = new Promise<T>((resolve, reject) => {
-    queue.push({ awaitable, resolve, reject } as Job);
-  });
+    queue.push({ awaitable, resolve, reject } as Job)
+  })
 
   if (inactive) {
     /* An executor is not currently active; Start one now. */
-    _asyncQueueExecutor(queue, () => _queueAsyncBuckets.delete(bucket));
+    _asyncQueueExecutor(queue, () => _queueAsyncBuckets.delete(bucket))
   }
 
-  return jobPromise;
+  return jobPromise
 }

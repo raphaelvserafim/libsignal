@@ -1,10 +1,9 @@
-
 /**
  * @class SignalError
  * @extends Error
  * @desc Base class for all signal-related errors.
  */
-export class SignalError extends Error { }
+export class SignalError extends Error {}
 
 /**
  * @class UntrustedIdentityKeyError
@@ -12,14 +11,14 @@ export class SignalError extends Error { }
  * @desc Thrown when a message is received with an untrusted identity key.
  */
 export class UntrustedIdentityKeyError extends SignalError {
-  public readonly name: string = 'UntrustedIdentityKeyError';
-  public readonly addr: string;
-  public readonly identityKey: Uint8Array;
+  public readonly name: string = 'UntrustedIdentityKeyError'
+  public readonly addr: string
+  public readonly identityKey: Uint8Array
 
   constructor(addr: string, identityKey: Uint8Array) {
-    super();
-    this.addr = addr;
-    this.identityKey = identityKey;
+    super()
+    this.addr = addr
+    this.identityKey = identityKey
   }
 }
 
@@ -29,10 +28,10 @@ export class UntrustedIdentityKeyError extends SignalError {
  * @desc Base class for session-related errors.
  */
 export class SessionError extends SignalError {
-  public readonly name: string = 'SessionError';
+  public readonly name: string = 'SessionError'
 
   constructor(message: string) {
-    super(message);
+    super(message)
   }
 }
 
@@ -42,10 +41,10 @@ export class SessionError extends SignalError {
  * @desc Thrown when a message counter is out of sync.
  */
 export class MessageCounterError extends SessionError {
-  public readonly name: string = 'MessageCounterError';
+  public readonly name: string = 'MessageCounterError'
 
   constructor(message: string) {
-    super(message);
+    super(message)
   }
 }
 
@@ -55,9 +54,9 @@ export class MessageCounterError extends SessionError {
  * @desc Thrown when there is an issue with a prekey.
  */
 export class PreKeyError extends SessionError {
-  public readonly name: string = 'PreKeyError';
+  public readonly name: string = 'PreKeyError'
 
   constructor(message: string) {
-    super(message);
+    super(message)
   }
 }
