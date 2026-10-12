@@ -106,6 +106,16 @@ export class SessionBuilder {
     theirEphemeralPubKey: Buffer | undefined,
     theirSignedPubKey: Buffer | undefined,
     registrationId: number,
+    /**
+     * Segredo compartilhado do ML-KEM-1024, quando a sessão for PQXDH.
+     *
+     * O WhatsApp concatena este segredo **no fim** da mesma sequência do X3DH clássico
+     * (0xFF ‖ a1 ‖ a2 ‖ a3 ‖ [a4]) e troca a string de info do KDF. Conferido no módulo
+     * `WASignalPQXDH` do cliente web, não deduzido da especificação pública.
+     *
+     * Ausente = sessão clássica, byte por byte igual ao que era antes.
+     */
+    kemSharedSecret?: Uint8Array,
   ): Promise<SessionEntry> {
     if (isInitiator) {
       if (ourSignedKey) {
@@ -118,12 +128,13 @@ export class SessionBuilder {
       }
       theirSignedPubKey = theirEphemeralPubKey
     }
-    let sharedSecret
-    if (!ourEphemeralKey || !theirEphemeralPubKey) {
-      sharedSecret = new Uint8Array(32 * 4)
-    } else {
-      sharedSecret = new Uint8Array(32 * 5)
+    // O segredo do KEM, quando existe, ocupa UM bloco a mais no fim — sem buraco no meio,
+    // porque o cliente real concatena e pula o a4 ausente em vez de deixar espaço.
+    if (kemSharedSecret && kemSharedSecret.length !== 32) {
+      throw new Error(`PQXDH: shared secret com ${kemSharedSecret.length} bytes, esperado 32`)
     }
+    const blocosDh = !ourEphemeralKey || !theirEphemeralPubKey ? 4 : 5
+    const sharedSecret = new Uint8Array(32 * (blocosDh + (kemSharedSecret ? 1 : 0)))
     for (var i = 0; i < 32; i++) {
       sharedSecret[i] = 0xff
     }
@@ -143,7 +154,13 @@ export class SessionBuilder {
       const a4 = curve.calculateAgreement(theirEphemeralPubKey, ourEphemeralKey.privKey)
       sharedSecret.set(new Uint8Array(a4), 32 * 4)
     }
-    const masterKey = crypto.deriveSecrets(Buffer.from(sharedSecret), Buffer.alloc(32), Buffer.from('WhisperText'))
+    if (kemSharedSecret) sharedSecret.set(kemSharedSecret, 32 * blocosDh)
+
+    // A string de info muda SÓ na sessão PQXDH. Trocá-la na clássica quebraria toda sessão
+    // existente. O nome diz CRYSTALS-KYBER-1024 embora o algoritmo seja ML-KEM-1024 — é
+    // literal do cliente real e não deve ser "corrigido".
+    const info = kemSharedSecret ? 'WhisperText_X25519_SHA-256_CRYSTALS-KYBER-1024' : 'WhisperText'
+    const masterKey = crypto.deriveSecrets(Buffer.from(sharedSecret), Buffer.alloc(32), Buffer.from(info))
     const session = SessionRecord.createEntry()
     session.registrationId = registrationId
     session.currentRatchet = {

@@ -1,6 +1,7 @@
 import crypto from './crypto/index.js'
 import curve from './crypto/curve.js'
 import * as keyhelper from './crypto/keyhelper.js'
+import * as kem from './crypto/kem.js'
 import { ProtocolAddress } from './protocol/protocol-address.js'
 import { SessionBuilder } from './protocol/session-builder.js'
 import { SessionCipher } from './protocol/session-cipher.js'
@@ -17,6 +18,7 @@ export {
   crypto,
   curve,
   keyhelper,
+  kem,
   ProtocolAddress,
   SessionBuilder,
   SessionCipher,
@@ -36,6 +38,7 @@ const libsignal = {
   crypto,
   curve,
   keyhelper,
+  kem,
   ProtocolAddress,
   SessionBuilder,
   SessionCipher,
