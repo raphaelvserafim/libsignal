@@ -12,6 +12,56 @@ import { ProtocolAddress } from './protocol-address.js'
 import { SessionEntry } from './session-entry.js'
 import { SessionRecord } from './session-record.js'
 
+/**
+ * Monta a sequência de segredos que alimenta o KDF da sessão.
+ *
+ * Clássico (X3DH):  0xFF×32 ‖ a1 ‖ a2 ‖ a3 ‖ [a4]
+ * PQXDH:            o mesmo, com o segredo do ML-KEM concatenado NO FIM.
+ *
+ * O iniciador e o receptor calculam os MESMOS valores com os papéis trocados, por isso
+ * `a1` e `a2` mudam de posição conforme o lado. Errar essa ordem não produz erro — produz
+ * duas pontas derivando root keys diferentes, ou seja, sessão morta em silêncio. É por isso
+ * que isto é função pura: dá para testar a simetria dos dois lados diretamente.
+ *
+ * Conferido contra o módulo `WASignalPQXDH` do cliente web real.
+ */
+export function buildSharedSecret(args: {
+  isInitiator: boolean
+  ourIdentityPriv: Uint8Array
+  ourSignedPriv: Uint8Array
+  ourEphemeralPriv?: Uint8Array
+  theirIdentityPub: Uint8Array
+  theirSignedPub: Uint8Array
+  theirEphemeralPub?: Uint8Array
+  kemSharedSecret?: Uint8Array
+}): Uint8Array {
+  const { isInitiator, theirIdentityPub, theirSignedPub, theirEphemeralPub, kemSharedSecret } = args
+
+  if (kemSharedSecret && kemSharedSecret.length !== 32) {
+    throw new Error(`PQXDH: shared secret com ${kemSharedSecret.length} bytes, esperado 32`)
+  }
+
+  const temA4 = !!(args.ourEphemeralPriv && theirEphemeralPub)
+  const blocosDh = temA4 ? 5 : 4
+  const out = new Uint8Array(32 * (blocosDh + (kemSharedSecret ? 1 : 0)))
+  out.fill(0xff, 0, 32)
+
+  const a1 = curve.calculateAgreement(theirSignedPub, args.ourIdentityPriv)
+  const a2 = curve.calculateAgreement(theirIdentityPub, args.ourSignedPriv)
+  const a3 = curve.calculateAgreement(theirSignedPub, args.ourSignedPriv)
+
+  out.set(new Uint8Array(a1), isInitiator ? 32 : 32 * 2)
+  out.set(new Uint8Array(a2), isInitiator ? 32 * 2 : 32)
+  out.set(new Uint8Array(a3), 32 * 3)
+
+  if (temA4) {
+    out.set(new Uint8Array(curve.calculateAgreement(theirEphemeralPub!, args.ourEphemeralPriv!)), 32 * 4)
+  }
+  if (kemSharedSecret) out.set(kemSharedSecret, 32 * blocosDh)
+
+  return out
+}
+
 export class SessionBuilder {
   addr: ProtocolAddress
   storage: StorageInterface
@@ -130,31 +180,17 @@ export class SessionBuilder {
     }
     // O segredo do KEM, quando existe, ocupa UM bloco a mais no fim — sem buraco no meio,
     // porque o cliente real concatena e pula o a4 ausente em vez de deixar espaço.
-    if (kemSharedSecret && kemSharedSecret.length !== 32) {
-      throw new Error(`PQXDH: shared secret com ${kemSharedSecret.length} bytes, esperado 32`)
-    }
-    const blocosDh = !ourEphemeralKey || !theirEphemeralPubKey ? 4 : 5
-    const sharedSecret = new Uint8Array(32 * (blocosDh + (kemSharedSecret ? 1 : 0)))
-    for (var i = 0; i < 32; i++) {
-      sharedSecret[i] = 0xff
-    }
     const ourIdentityKey = await this.storage.getOurIdentity()
-    const a1 = curve.calculateAgreement(theirSignedPubKey!, ourIdentityKey.privKey)
-    const a2 = curve.calculateAgreement(theirIdentityPubKey, ourSignedKey!.privKey)
-    const a3 = curve.calculateAgreement(theirSignedPubKey!, ourSignedKey!.privKey)
-    if (isInitiator) {
-      sharedSecret.set(new Uint8Array(a1), 32)
-      sharedSecret.set(new Uint8Array(a2), 32 * 2)
-    } else {
-      sharedSecret.set(new Uint8Array(a1), 32 * 2)
-      sharedSecret.set(new Uint8Array(a2), 32)
-    }
-    sharedSecret.set(new Uint8Array(a3), 32 * 3)
-    if (ourEphemeralKey && theirEphemeralPubKey) {
-      const a4 = curve.calculateAgreement(theirEphemeralPubKey, ourEphemeralKey.privKey)
-      sharedSecret.set(new Uint8Array(a4), 32 * 4)
-    }
-    if (kemSharedSecret) sharedSecret.set(kemSharedSecret, 32 * blocosDh)
+    const sharedSecret = buildSharedSecret({
+      isInitiator,
+      ourIdentityPriv: ourIdentityKey.privKey,
+      ourSignedPriv: ourSignedKey!.privKey,
+      ourEphemeralPriv: ourEphemeralKey?.privKey,
+      theirIdentityPub: theirIdentityPubKey,
+      theirSignedPub: theirSignedPubKey!,
+      theirEphemeralPub: theirEphemeralPubKey,
+      kemSharedSecret,
+    })
 
     // A string de info muda SÓ na sessão PQXDH. Trocá-la na clássica quebraria toda sessão
     // existente. O nome diz CRYSTALS-KYBER-1024 embora o algoritmo seja ML-KEM-1024 — é
