@@ -17,6 +17,11 @@ message PreKeyWhisperMessage {
   optional bytes  baseKey        = 2;
   optional bytes  identityKey    = 3;
   optional bytes  message        = 4; // WhisperMessage
+  // PQXDH (ML-KEM-1024). Números conferidos no PreKeySignalMessageSpec do cliente web real.
+  // Opcionais: mensagem clássica não os traz, e protobuf ignora campo ausente — então
+  // acrescentá-los não muda nada para quem não usa PQ.
+  optional uint32 kyberPreKeyId  = 7;
+  optional bytes  kyberCiphertext = 8;
 }
 
 message KeyExchangeMessage {
