@@ -1,6 +1,6 @@
 {
   "name": "@raphaelvserafim/libsignal",
-  "version": "5.0.0",
+  "version": "5.0.1",
   "description": "Open Whisper Systems' libsignal for Node - TypeScript",
   "repository": {
     "type": "git",
@@ -30,7 +30,9 @@
     "test:watch": "vitest",
     "prepublishOnly": "npm run build && npm run test",
     "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
-    "format:check": "prettier --check \"src/**/*.ts\" \"tests/**/*.ts\""
+    "format:check": "prettier --check \"src/**/*.ts\" \"tests/**/*.ts\"",
+    "publish": "npm publish --access public",
+    "release": "node scripts/release.mjs"
   },
   "author": {
     "name": "Raphael Serafim",
