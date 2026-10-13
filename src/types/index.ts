@@ -29,6 +29,12 @@ export interface Device {
   registrationId: number
   preKey?: PreKey
   signedPreKey: SignedPreKey
+  /**
+   * Kyber prekey do par, quando o bundle traz `<pqkey>`: id, `value` de 1568 bytes
+   * (pública ML-KEM-1024) e `signature` de 64 bytes. **Opcional** — conta sem PQ não manda,
+   * e nesse caso a sessão sai clássica.
+   */
+  pqPreKey?: { keyId: number; publicKey: Uint8Array; signature: Uint8Array }
 }
 
 export interface ChainKey {
@@ -62,6 +68,9 @@ export interface PendingPreKey {
   signedKeyId: number
   baseKey: Buffer
   preKeyId?: number
+  /** PQXDH: viram os campos 7 e 8 do PreKeyWhisperMessage enquanto a sessão está pendente. */
+  kyberPreKeyId?: number
+  kyberCiphertext?: Uint8Array
 }
 
 export interface IncomingMessage {

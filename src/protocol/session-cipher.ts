@@ -122,6 +122,12 @@ export class SessionCipher {
         if (session.pendingPreKey.preKeyId) {
           preKeyMsg.preKeyId = session.pendingPreKey.preKeyId
         }
+        // PQXDH: campos 7 e 8. Só saem quando a sessão foi estabelecida contra uma `<pqkey>`
+        // do par — sem isso o receptor deriva o segredo clássico e a sessão não fecha.
+        if (session.pendingPreKey.kyberCiphertext && session.pendingPreKey.kyberPreKeyId != null) {
+          preKeyMsg.kyberPreKeyId = session.pendingPreKey.kyberPreKeyId
+          preKeyMsg.kyberCiphertext = Buffer.from(session.pendingPreKey.kyberCiphertext)
+        }
         body = Buffer.concat([
           Buffer.from([this._encodeTupleByte(VERSION, VERSION)]),
           Buffer.from(PreKeyWhisperMessage.encode(preKeyMsg).finish()),

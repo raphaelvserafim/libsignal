@@ -368,6 +368,12 @@ export const textsecure = ($root.textsecure = (() => {
      */
     PreKeyWhisperMessage.prototype.signedPreKeyId = 0
 
+    /** PQXDH: id da kyber prekey usada (campo 7). */
+    PreKeyWhisperMessage.prototype.kyberPreKeyId = 0
+
+    /** PQXDH: ciphertext do ML-KEM-1024, 1568 bytes (campo 8). */
+    PreKeyWhisperMessage.prototype.kyberCiphertext = $util.newBuffer([])
+
     /**
      * PreKeyWhisperMessage baseKey.
      * @member {Uint8Array} baseKey
@@ -427,6 +433,10 @@ export const textsecure = ($root.textsecure = (() => {
         writer.uint32(/* id 5, wireType 0 =*/ 40).uint32(message.registrationId)
       if (message.signedPreKeyId != null && Object.hasOwnProperty.call(message, 'signedPreKeyId'))
         writer.uint32(/* id 6, wireType 0 =*/ 48).uint32(message.signedPreKeyId)
+      if (message.kyberPreKeyId != null && Object.hasOwnProperty.call(message, 'kyberPreKeyId'))
+        writer.uint32(/* id 7, wireType 0 =*/ 56).uint32(message.kyberPreKeyId)
+      if (message.kyberCiphertext != null && Object.hasOwnProperty.call(message, 'kyberCiphertext'))
+        writer.uint32(/* id 8, wireType 2 =*/ 66).bytes(message.kyberCiphertext)
       return writer
     }
 
@@ -472,6 +482,14 @@ export const textsecure = ($root.textsecure = (() => {
           }
           case 6: {
             message.signedPreKeyId = reader.uint32()
+            break
+          }
+          case 7: {
+            message.kyberPreKeyId = reader.uint32()
+            break
+          }
+          case 8: {
+            message.kyberCiphertext = reader.bytes()
             break
           }
           case 2: {

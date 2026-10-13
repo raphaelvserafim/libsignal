@@ -5,7 +5,7 @@
 'use strict'
 import crypto from '../crypto/index.js'
 import curve from '../crypto/curve.js'
-import { decapsulate as kemDecapsulate } from '../crypto/kem.js'
+import { decapsulate as kemDecapsulate, encapsulate as kemEncapsulate } from '../crypto/kem.js'
 import { BaseKeyType, ChainType, Device, IncomingMessage, KeyPair, StorageInterface } from '../types/index.js'
 import { PreKeyError, UntrustedIdentityKeyError } from '../utils/errors.js'
 import queueJob from '../utils/queue-job.js'
@@ -81,6 +81,21 @@ export class SessionBuilder {
       if (!curve.verifySignature(device.identityKey, device.signedPreKey.publicKey, device.signedPreKey.signature)) {
         throw new Error('Invalid signature on device prekey bundle')
       }
+      // PQXDH: o bundle só traz `<pqkey>` se o par publica chaves pós-quânticas. Sem ele a
+      // sessão sai clássica — é o caminho de hoje e tem que continuar funcionando.
+      // A assinatura é verificada como a da signed prekey: aceitar chave PQ não assinada
+      // deixaria qualquer um injetar a própria e ler a sessão.
+      let kemSharedSecret: Uint8Array | undefined
+      let kyberCiphertext: Uint8Array | undefined
+      if (device.pqPreKey) {
+        if (!curve.verifySignature(device.identityKey, device.pqPreKey.publicKey, device.pqPreKey.signature)) {
+          throw new Error('Invalid signature on device pq prekey')
+        }
+        const encapsulado = kemEncapsulate(device.pqPreKey.publicKey)
+        kemSharedSecret = encapsulado.sharedSecret
+        kyberCiphertext = encapsulado.ciphertext
+      }
+
       const baseKey = curve.generateKeyPair()
       const devicePreKey = device.preKey && device.preKey.publicKey
       const session = await this.initSession(
@@ -91,10 +106,17 @@ export class SessionBuilder {
         devicePreKey,
         device.signedPreKey.publicKey,
         device.registrationId,
+        kemSharedSecret,
       )
       session.pendingPreKey = {
         signedKeyId: device.signedPreKey.keyId,
         baseKey: baseKey.pubKey,
+      }
+      if (device.pqPreKey && kyberCiphertext) {
+        // Vão para os campos 7 e 8 do PreKeyWhisperMessage; sem eles o receptor deriva
+        // o segredo clássico e a sessão não fecha.
+        session.pendingPreKey.kyberPreKeyId = device.pqPreKey.keyId
+        session.pendingPreKey.kyberCiphertext = kyberCiphertext
       }
       if (device.preKey) {
         session.pendingPreKey.preKeyId = device.preKey.keyId
