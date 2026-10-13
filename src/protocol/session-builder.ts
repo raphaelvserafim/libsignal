@@ -5,6 +5,7 @@
 'use strict'
 import crypto from '../crypto/index.js'
 import curve from '../crypto/curve.js'
+import { decapsulate as kemDecapsulate } from '../crypto/kem.js'
 import { BaseKeyType, ChainType, Device, IncomingMessage, KeyPair, StorageInterface } from '../types/index.js'
 import { PreKeyError, UntrustedIdentityKeyError } from '../utils/errors.js'
 import queueJob from '../utils/queue-job.js'
@@ -129,6 +130,25 @@ export class SessionBuilder {
     if (!signedPreKeyPair) {
       throw new PreKeyError('Missing SignedPreKey')
     }
+    // PQXDH: o remetente encapsulou contra uma kyber prekey NOSSA e mandou o ciphertext.
+    // Se não conseguirmos decapsular, NÃO dá para continuar: derivaríamos o segredo clássico
+    // enquanto ele derivou o pós-quântico, e a sessão nasceria morta sem nenhum erro — o
+    // remetente veria "Esperando por esta mensagem" para sempre. Melhor falhar alto aqui.
+    let kemSharedSecret: Uint8Array | undefined
+    if (message.kyberCiphertext?.length) {
+      if (!this.storage.loadKyberPreKey) {
+        throw new PreKeyError('Mensagem PQXDH recebida, mas o store não suporta kyber prekeys')
+      }
+      if (message.kyberPreKeyId == null) {
+        throw new PreKeyError('Mensagem PQXDH sem kyberPreKeyId')
+      }
+      const kyberPair = await this.storage.loadKyberPreKey(message.kyberPreKeyId)
+      if (!kyberPair) {
+        throw new PreKeyError(`Kyber prekey ${message.kyberPreKeyId} não encontrada`)
+      }
+      kemSharedSecret = kemDecapsulate(message.kyberCiphertext, kyberPair.privateKey)
+    }
+
     const existingOpenSession = record.getOpenSession()
     if (existingOpenSession) {
       console.warn('Closing open session in favor of incoming prekey bundle')
@@ -143,6 +163,7 @@ export class SessionBuilder {
         message.baseKey,
         undefined,
         message.registrationId,
+        kemSharedSecret,
       ),
     )
     return message.preKeyId

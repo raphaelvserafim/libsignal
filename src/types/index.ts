@@ -70,6 +70,9 @@ export interface IncomingMessage {
   preKeyId?: number
   signedPreKeyId: number
   registrationId: number
+  /** PQXDH: campos 7 e 8 do PreKeyWhisperMessage. Ausentes em mensagem clássica. */
+  kyberPreKeyId?: number
+  kyberCiphertext?: Uint8Array
 }
 
 export interface SessionRecordInterface {
@@ -90,6 +93,12 @@ export interface StorageInterface {
   storeSession(address: string, record: SessionRecordInterface): Promise<void>
   loadPreKey(keyId: number): Promise<KeyPair | undefined>
   loadSignedPreKey(keyId: number): Promise<KeyPair | undefined>
+  /**
+   * Par ML-KEM-1024 de uma kyber prekey. **Opcional**: store sem suporte mantém o
+   * comportamento clássico — mas aí mensagem PQ de entrada é REJEITADA em vez de virar
+   * sessão quebrada (ver `initIncoming`).
+   */
+  loadKyberPreKey?(keyId: number): Promise<{ publicKey: Uint8Array; privateKey: Uint8Array } | undefined>
   getOurIdentity(): Promise<KeyPair>
   getOurRegistrationId?(): Promise<number>
   removePreKey?(keyId: number): Promise<void>
